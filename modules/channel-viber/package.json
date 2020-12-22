@@ -1,8 +1,8 @@
 {
-  "name": "channel-messenger",
-  "fullName": "Channel Messenger",
+  "name": "channel-viber",
+  "fullName": "Channel Viber",
   "version": "1.0.0",
-  "description": "A Botpress connector for Messenger",
+  "description": "A Botpress connector for Viber",
   "private": true,
   "author": "Botpress, Inc.",
   "license": "AGPL-3.0-only",
@@ -17,7 +17,7 @@
     "bluebird-global": "^1.0.1",
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
-    "lodash": "^4.17.19",
+    "lodash": ">=4.17.19",
     "messaging-api-viber": "^1.0.1",
     "viber-bot": "^1.0.16"
   },
