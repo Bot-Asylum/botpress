@@ -28,6 +28,7 @@ export interface Config {
   name?: string
   avatar?: string
   origin: string
+  webHook: string
   /**
    * The greeting message people will see on the welcome screen
    * Docs: https://developers.facebook.com/docs/messenger-platform/reference/messenger-profile-api/greeting
