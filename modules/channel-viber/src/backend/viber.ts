@@ -1,21 +1,19 @@
-import { Router } from 'express'
-import * as http from 'http';
+import { Request, Response, Router, json } from 'express';
 import { ViberClient } from 'messaging-api-viber';
 import { EventType } from 'messaging-api-viber/dist/ViberTypes';
 
+import _ from 'lodash';
 
 import { Config } from '../config';
 import { Client } from './client';
 
-import _ from 'lodash';
-
 import * as sdk from 'botpress/sdk';
+import * as http from 'http';
 
 const debug = DEBUG('channel-viber');
-const debugMessages = debug.sub('messages');
-const debugHttp = debug.sub('http');
-const debugWebhook = debugHttp.sub('webhook');
-const debugHttpOut = debugHttp.sub('out');
+const debugIncoming = debug.sub('incoming');
+const debugOutgoing = debug.sub('outgoing');
+
 
 interface MountedBot {
   botId: string
@@ -34,6 +32,9 @@ export class ViberService {
     if (event.channel !== 'viber') {
       return next();
     }
+    const messageType = event.type === 'default' ? 'text' : event.type;
+    const client = this.mountedBots[0].client;
+    next(undefined, false);
   }
 
   private handleIncomingEvent(req, res): void {
@@ -43,19 +44,15 @@ export class ViberService {
     return this.bp.config.getModuleConfig('channel-viber');
   }
 
-  private async handleIncomingMessage(req, res) {
-    console.log(req);
-    // // console.log(req.body);
-    // // const body = req.body
-    // //
-    // // if (body.event === 'message') {
-    // //   this.mountedBots[0].client.sendMessage(
-    // //     body.sender,
-    // //     body.message,
-    // //   )
-    // // }
-    //
-    // return res.status(200)
+  private async handleIncomingMessage(req: Request, res: Response): Promise<Response> {
+    const body = req.body;
+    if (body.event === 'message') {
+      // this.mountedBots[0].client.sendMessage(
+      //   body.sender,
+      //   body.message,
+      // );
+    }
+    return res.send();
   }
 
   public async initialize(): Promise<void> {
@@ -82,48 +79,42 @@ export class ViberService {
     }
     this.bp.logger.info(`Viber Webhook URL is ${publicPath.replace('BOT_ID', '___')}/webhook`);
 
-    this.router.use('/webhook', this.handleIncomingMessage.bind(this))
+    this.router.use(json());
+
+    this.bp.events.registerMiddleware({
+      description: 'Sends outgoing messages for the viber channel',
+      direction: 'outgoing',
+      handler: this.handleOutgoingEvent.bind(this),
+      name: 'viber.sendMessages',
+      order: 200
+    });
   }
 
   async mountBot(botId: string): Promise<void> {
     try {
-      const server = http.createServer((req, res) => {
-        console.log(req);
-        res.writeHead(200);
-        res.end();
-      });
-
-      server.listen(4001, async () => {
-        const config = await this.getConfig();
-        const webhookPath = (await this.router.getPublicPath()) + '/webhook';
-        const viberClient = new ViberClient(
-          {
-            accessToken: '4ca2b2be59000d19-b49363357bf1b496-c941a1ab955b7eb6',
-            sender: {
-              name: config.name || 'mfksdwef',
-              avatar: config.avatar || ''
-            },
-            origin: config.origin,
-            onRequest: request => {
-              console.log('request.body');
-              console.log(request.body);
-              console.log('request.body');
-            }
-          }
-        );
-
-        await viberClient.setWebhook(
-          'https://e3c863139976.ngrok.io/webhook',
-          {
-            eventTypes: [EventType.Delivered, EventType.Seen]
-          }
-        );
-        const client = new Client(viberClient);
-        this.mountedBots.push({ client, botId });
-      })
+      this.router.post('/webhook', this.handleIncomingMessage.bind(this));
+      const config = await this.getConfig();
+      const webhookPath = ((await this.router.getPublicPath()) + '/webhook').replace('BOT_ID', botId);
+      const viberClient = new ViberClient(
+        {
+          accessToken: '4ca2b2be59000d19-b49363357bf1b496-c941a1ab955b7eb6',
+          sender: {
+            name: config.name || 'mfksdwef',
+            avatar: config.avatar || ''
+          },
+          origin: config.origin,
+        }
+      );
+      await viberClient.setWebhook(
+        'https://7bea06616933.ngrok.io/api/v1/bots/tstqwe/mod/channel-viber/webhook',
+        {
+          eventTypes: [EventType.Delivered, EventType.Seen]
+        }
+      );
+      const client = new Client(viberClient);
+      this.mountedBots.push({ client, botId });
     } catch (e) {
       console.log(e);
-      debugWebhook(`[Viber] error on set webhook ${e}`);
     }
   }
 

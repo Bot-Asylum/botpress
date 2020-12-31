@@ -15,7 +15,9 @@ const onServerReady = async (bp: typeof sdk) => {
 };
 
 const onBotMount = async (bp: typeof sdk, botId: string) => {
-  await service.mountBot(botId);
+  setTimeout(async () => {
+    await service.mountBot(botId);
+  }, 5000)
 };
 
 const onBotUnmount = async (bp: typeof sdk, botId: string) => {
